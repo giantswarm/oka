@@ -1,27 +1,50 @@
-# General Go template repository
+# OKA: Oncall Kubernetes Assistant
 
-This is a general template repository containing some basic files every GitHub repo owned by Giant Swarm should have.
+OKA (Oncall Kubernetes Assistant) is a powerful tool designed to assist on-call engineers in managing and troubleshooting Kubernetes-related alerts. By leveraging the capabilities of Large Language Models (LLMs), OKA can analyze alerts, retrieve relevant runbooks, and provide context-aware assistance to streamline the incident response process.
 
-Note also these more specific repositories:
+## Features
 
-- [template-app](https://github.com/giantswarm/template-app)
-- [gitops-template](https://github.com/giantswarm/gitops-template)
-- [python-app-template](https://github.com/giantswarm/python-app-template)
+- **OpsGenie Integration**: OKA seamlessly integrates with OpsGenie to fetch and process alerts from your designated team.
+- **LLM-Powered Assistance**: By using LLMs, OKA can understand the context of an alert and provide intelligent suggestions and insights.
+- **Runbook Retrieval**: OKA can automatically retrieve and display relevant runbooks for a given alert, ensuring that you have the necessary information at your fingertips.
+- **MCP Tooling**: OKA's functionality can be extended through the use of MCP (Model-Context Protocol) servers, allowing you to integrate with other tools and services (e.g. Kubernetes, Slack, etc.).
 
-## Creating a new repository
+## Getting Started
 
-Please do not use the `Use this template` function in the GitHub web UI.
+To get started with OKA, you will need to create a configuration file (e.g., `oka.yaml`) and provide it to the application. The configuration file allows you to specify your OpsGenie API key, LLM provider, and other settings.
 
-Check out the according [handbook article](https://handbook.giantswarm.io/docs/dev-and-releng/repository/go/) for better instructions.
+### Configuration
 
-### Some suggestions for your README
+Here is an example of a basic configuration file (both YAML and JSON formats are supported):
 
-After you have created your new repository, you may want to add some of these badges to the top of your README.
+```yaml
+log_level: debug
+runbook_dir: /path/to/your/runbooks
+slack_handle: your-slack-handle
+opsgenie:
+  team: your-team-name
+  interval: 1m
+  query_string: 'status: open'
+llm:
+  provider: openai
+  token: your-openai-api-key
+  model: gpt-4
+mcp_servers:
+  opsgenie:
+    command: mcp-server-kubernetes
+```
 
-- **CircleCI:** After enabling builds for this repo via [this link](https://circleci.com/setup-project/gh/giantswarm/oka), you can find badge code on [this page](https://app.circleci.com/settings/project/github/giantswarm/oka/status-badges).
+### Running OKA
 
-- **Go reference:** use [this helper](https://pkg.go.dev/badge/) to create the markdown code.
+Once you have created your configuration file, you can run OKA using the following command:
 
-- **Go report card:** enter the module name on the [front page](https://goreportcard.com/) and hit "Generate report". Then use this markdown code for your badge: `[![Go report card](https://goreportcard.com/badge/github.com/giantswarm/oka)](https://goreportcard.com/report/github.com/giantswarm/oka)`
+```bash
+go install -v github.com/giantswarm/oka@latest
+oka --config oka.yaml
+```
 
-- **Sourcegraph "used by N projects" badge**: for public Go repos only: `[![Sourcegraph](https://sourcegraph.com/github.com/giantswarm/oka/-/badge.svg)](https://sourcegraph.com/github.com/giantswarm/oka)`
+## How It Works
+
+OKA operates by periodically fetching alerts from OpsGenie. When a new, unacknowledged alert is found, OKA initiates a new session to process it. During the session, OKA uses an LLM to analyze the alert and determine the best course of action. This may involve retrieving a runbook, executing a command, or interacting with other tools via MCP servers.
+
+Each session is logged to a file in the `sessions` directory, allowing you to review the entire interaction between OKA and the LLM.
