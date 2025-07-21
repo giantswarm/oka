@@ -38,11 +38,13 @@ See the [reference configuration file](./pkg/config) for more details on availab
 
 ### Running OKA
 
-Once you have created your configuration file, you can run OKA using the following command:
+You can run OKA using the following command:
 
 ```bash
 go install -v github.com/giantswarm/oka@latest
-oka --config oka.yaml
+curl -Lo oka.yaml https://raw.githubusercontent.com/giantswarm/oka/refs/heads/main/pkg/config/oka.yaml.example
+# Edit oka.yaml to suit your environment
+oka
 ```
 
 ## How It Works
