@@ -8,7 +8,7 @@ mcp_servers:
   opsgenie:
     command: mcp-opsgenie
     env:
-      OPSGENIE_TOKEN: opsgenie-token
+    - OPSGENIE_TOKEN=opsgenie-token
   kubernes:
     command: mcp-server-kubernetes
     shared: false
@@ -20,8 +20,8 @@ mcp_servers:
       - --transport
       - stdio
     env:
-      SLACK_MCP_XOXP_TOKEN: xoxb-bot-token
-      SLACK_MCP_ADD_MESSAGE_TOOL: true
+    - SLACK_MCP_XOXP_TOKEN=xoxb-bot-token
+    - SLACK_MCP_ADD_MESSAGE_TOOL=true
 llm:
   provider: openai
   token: sk-proj-openai-token

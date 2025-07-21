@@ -38,13 +38,13 @@ type MCPServers map[string]MCPServer
 // MCPServer represents the configuration for an MCP server, including the
 // command to run, arguments, environment variables, and other settings.
 type MCPServer struct {
-	Args                     []string          `mapstructure:"args"`                                 // Arguments for the MCP server command
-	Command                  string            `mapstructure:"command"`                              // Command to run the MCP server
-	Disabled                 bool              `mapstructure:"disabled,omitempty"`                   // Whether this server is disabled
-	Env                      map[string]string `mapstructure:"env"`                                  // Environment variables for the MCP server command
-	InitializeTimeoutSeconds *int              `mapstructure:"initialize_timeout_seconds,omitempty"` // Timeout for server initialization in seconds
-	Shared                   *bool             `mapstructure:"shared,omitempty"`                     // Whether this server is shared across sessions
-	URL                      string            `mapstructure:"url"`                                  // URL of the MCP server
+	Args                     []string `mapstructure:"args"`                                 // Arguments for the MCP server command
+	Command                  string   `mapstructure:"command"`                              // Command to run the MCP server
+	Disabled                 bool     `mapstructure:"disabled,omitempty"`                   // Whether this server is disabled
+	Env                      []string `mapstructure:"env"`                                  // Environment variables for the MCP server command
+	InitializeTimeoutSeconds *int     `mapstructure:"initialize_timeout_seconds,omitempty"` // Timeout for server initialization in seconds
+	Shared                   *bool    `mapstructure:"shared,omitempty"`                     // Whether this server is shared across sessions
+	URL                      string   `mapstructure:"url"`                                  // URL of the MCP server
 }
 
 // LLM holds the configuration for the Large Language Model, including the

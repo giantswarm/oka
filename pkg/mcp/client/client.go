@@ -70,6 +70,11 @@ func (c *Clients) RegisterServersConfig(ctx context.Context, mcpServers config.M
 			// Continue if context is not done
 		}
 
+		if server.Disabled {
+			slog.Info("Skipping disabled MCP server", "server", name)
+			continue
+		}
+
 		// Create a new MCP client.
 		sc, err := newClient(server)
 		if err != nil {
@@ -207,33 +212,21 @@ func newClient(mcpServer config.MCPServer) (c *client.Client, err error) {
 			}
 			// Add the kubeconfig file to the environment variables.
 			if mcpEnv == nil {
-				mcpEnv = make(map[string]string)
+				mcpEnv = make([]string, 0)
 			}
-			mcpEnv["KUBECONFIG"] = kubeConfigFile
+
+			mcpEnv = append(mcpEnv, fmt.Sprintf("KUBECONFIG=%s", kubeConfigFile))
+
 			slog.Info("Using temporary kubeconfig file", "file", kubeConfigFile)
 			// TODO: handle cleanup of the temporary file properly
 			//defer os.Remove(kubeConfigFile) // Clean up the temporary file after use
 		}
-		env := mapToKeyValueSlice(mcpEnv)
-		t = transport.NewStdio(mcpServer.Command, env, mcpServer.Args...)
+		t = transport.NewStdio(mcpServer.Command, mcpEnv, mcpServer.Args...)
 	}
 
 	c = client.NewClient(t)
 
 	return c, nil
-}
-
-// mapToKeyValueSlice converts a map of strings to a slice of key=value strings.
-func mapToKeyValueSlice(m map[string]string) []string {
-	var kvs []string
-
-	for k, v := range m {
-		// Convert keys to uppercase and format as key=value.
-		// This is required because viper converts all keys to lowercase.
-		kvs = append(kvs, fmt.Sprintf("%s=%s", strings.ToUpper(k), v))
-	}
-
-	return kvs
 }
 
 // Close closes all unique MCP clients.
