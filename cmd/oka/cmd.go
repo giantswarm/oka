@@ -1,4 +1,4 @@
-package main
+package oka
 
 import (
 	"context"
@@ -27,8 +27,8 @@ var (
 	name = "oka"
 )
 
-// cmd defines the root command for the MCP time server.
-var cmd = &cobra.Command{
+// Cmd defines the root command for the MCP time server.
+var Cmd = &cobra.Command{
 	Use:   name,
 	Short: "Oncall Kubernetes Assistant (OKA)",
 	Long:  `Oncall Kubernetes Assistant (OKA) is a tool to help you manage your oncall duties with OpsGenie by leveraging LLM capabilities.`,

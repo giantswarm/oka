@@ -2,7 +2,7 @@ slack_handle: SlackMemberID
 opsgenie:
   interval: 30s
   env_var: OPSGENIE_TOKEN
-  query_string: status: open AND responders: {{ .Team }} AND createdAt >= "{{ .Today }}"
+  query_string: 'status: open AND responders: {{ .Team }} AND createdAt >= "{{ .Today }}"'
   team: atlas
 mcp_servers:
   opsgenie:
