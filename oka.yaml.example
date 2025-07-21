@@ -1,0 +1,28 @@
+slack_handle: SlackMemberID
+opsgenie:
+  interval: 30s
+  env_var: OPSGENIE_TOKEN
+  query_string: status: open AND responders: {{ .Team }} AND createdAt >= "{{ .Today }}"
+  team: atlas
+mcp_servers:
+  opsgenie:
+    command: mcp-opsgenie
+    env:
+      OPSGENIE_TOKEN: opsgenie-token
+  kubernes:
+    command: mcp-server-kubernetes
+    shared: false
+  slack:
+    command: npx
+    args:
+      - -y
+      - slack-mcp-server@latest
+      - --transport
+      - stdio
+    env:
+      SLACK_MCP_XOXP_TOKEN: xoxb-bot-token
+      SLACK_MCP_ADD_MESSAGE_TOOL: true
+llm:
+  provider: openai
+  token: sk-proj-openai-token
+  model: gpt-4.1
