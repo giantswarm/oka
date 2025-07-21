@@ -34,6 +34,8 @@ mcp_servers:
     command: mcp-server-kubernetes
 ```
 
+See the [reference configuration file](./pkg/config) for more details on available options.
+
 ### Running OKA
 
 Once you have created your configuration file, you can run OKA using the following command:
