@@ -13,28 +13,32 @@ import (
 )
 
 var (
-	config = Config{
-		LogLevel:       "info",
-		MaxCalls:       20,
-		SessionsLogDir: "sessions",
+	defaultConfig = func() Config {
+		return Config{
+			LogLevel:       "info",
+			MaxCalls:       20,
+			SessionsLogDir: "sessions",
 
-		InitCommands: []Command{
-			{
-				Command: "tsh",
-				Args:    []string{"kube", "login", "--all"},
+			InitCommands: []Command{
+				{
+					Command: "tsh",
+					Args:    []string{"kube", "login", "--all"},
+				},
 			},
-		},
-		MCPServers: make(map[string]MCPServer),
-		OpsGenie: &OpsGenie{
-			APIUrl:      string(client.API_URL),
-			EnvVar:      "OPSGENIE_TOKEN",
-			Interval:    30 * time.Second,
-			QueryString: `responders: "{{ .Team }}" AND status: open`,
-		},
+			MCPServers: make(map[string]MCPServer),
+			OpsGenie: &OpsGenie{
+				APIUrl:      string(client.API_URL),
+				EnvVar:      "OPSGENIE_TOKEN",
+				Interval:    30 * time.Second,
+				QueryString: `responders: "{{ .Team }}" AND status: open`,
+			},
+		}
 	}
 )
 
 func LoadConfig(cfgFile string) (*Config, error) {
+	config := defaultConfig()
+
 	if cfgFile == "" {
 		return &config, nil
 	}
