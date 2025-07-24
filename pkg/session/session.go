@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,7 +71,7 @@ func (s *Session) Run(ctx context.Context) {
 		finalErr = fmt.Errorf("failed to marshal alert: %w", err)
 		return
 	}
-	s.addToContext(llms.ChatMessageTypeGeneric, llms.TextPart(string(alertBytes)))
+	s.addToContext(llms.ChatMessageTypeHuman, llms.TextPart(string(alertBytes)))
 
 	// Add system prompt instructions.
 	s.addToContext(llms.ChatMessageTypeSystem, llms.TextPart(systemPrompt))
@@ -104,11 +105,15 @@ func (s *Session) Run(ctx context.Context) {
 			finalErr = fmt.Errorf("failed to call LLM: %w", err)
 			return
 		}
-		s.addToContext(llms.ChatMessageTypeAI, llms.TextPart(llmResponse.Content))
-		s.log("\n## LLM response\n%s\n", llmResponse.Content)
+		// Trim whitespace from response content to avoid API rejection
+		trimmedContent := strings.TrimSpace(llmResponse.Content)
+		if trimmedContent != "" {
+			s.addToContext(llms.ChatMessageTypeAI, llms.TextPart(trimmedContent))
+		}
+		s.log("\n## LLM response\n%s\n", trimmedContent)
 
-		if len(llmResponse.ToolCalls) == 0 {
-			slog.Info("LLM did not suggest any tool calls", "session.id", s.ID)
+		// Check if the investigation is complete (considers both content and tool calls)
+		if s.isInvestigationComplete(llmResponse, lastCall) {
 			return
 		}
 
@@ -143,7 +148,7 @@ func (s *Session) Run(ctx context.Context) {
 			toolResponsePart := llms.ToolCallResponse{
 				ToolCallID: toolCall.ID,
 				Name:       toolCall.FunctionCall.Name,
-				Content:    toolResponse,
+				Content:    strings.TrimSpace(toolResponse),
 			}
 			s.addToContext(llms.ChatMessageTypeTool, toolResponsePart)
 		}
@@ -180,4 +185,25 @@ func (s Session) callLLM(ctx context.Context, lastCall bool) (*llms.ContentChoic
 // log writes a message to the session's log file.
 func (s Session) log(format string, args ...any) {
 	fmt.Fprintf(s.logFile, format, args...)
+}
+
+// isInvestigationComplete checks if the LLM response indicates the investigation is finished
+func (s *Session) isInvestigationComplete(response *llms.ContentChoice, isLastCall bool) bool {
+	// Check for completion phrases
+	if strings.Contains(strings.ToLower(response.Content), endSessionPhrase) {
+		slog.Info("LLM indicated investigation is complete", "session.id", s.ID, "phrase", endSessionPhrase)
+		return true
+	}
+
+	// If we haven't reached the limit of calls, continue the investigation
+	if !isLastCall {
+		return false
+	}
+
+	// If there are still tool call suggestions after the last call, log it
+	if len(response.ToolCalls) > 0 {
+		slog.Info("LLM call limit reached, but there are still tool call suggestions. Ending session prematurely.", "session.id", s.ID)
+	}
+
+	return true
 }
