@@ -15,6 +15,10 @@ import (
 	"github.com/giantswarm/oka/pkg/mcp/client"
 )
 
+const (
+	motivationText = "Provide next steps to continue the investigation."
+)
+
 // Session represents an AI assistant session for processing a single alert.
 type Session struct {
 	ID string
@@ -105,6 +109,20 @@ func (s *Session) Run(ctx context.Context) {
 			finalErr = fmt.Errorf("failed to call LLM: %w", err)
 			return
 		}
+
+		s.log("\n## LLM reasoning\n%s\n", llmResponse.ReasoningContent)
+		if len(llmResponse.ToolCalls) > 0 {
+			s.log("\n## LLM function call\n%s\n", llmResponse.ToolCalls[0].FunctionCall.Name)
+		} else {
+			s.log("\n## LLM function call\nNone\n")
+		}
+		s.log("\n## LLM stop reason\n%s\n", llmResponse.StopReason)
+
+		// Check if the investigation is complete (considers both content and tool calls)
+		if s.isInvestigationComplete(llmResponse, lastCall) {
+			return
+		}
+
 		// Trim whitespace from response content to avoid API rejection
 		trimmedContent := strings.TrimSpace(llmResponse.Content)
 		if trimmedContent != "" {
@@ -112,9 +130,10 @@ func (s *Session) Run(ctx context.Context) {
 		}
 		s.log("\n## LLM response\n%s\n", trimmedContent)
 
-		// Check if the investigation is complete (considers both content and tool calls)
-		if s.isInvestigationComplete(llmResponse, lastCall) {
-			return
+		// Insist in providing next steps if no tool calls are suggested.
+		if len(llmResponse.ToolCalls) == 0 {
+			s.addToContext(llms.ChatMessageTypeHuman, llms.TextPart(motivationText))
+			s.log("\n## Insist LLM to provide next steps\n%s\n", motivationText)
 		}
 
 		// Create a context with timeout for tool processing.
