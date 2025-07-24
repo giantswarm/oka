@@ -23,6 +23,13 @@ import (
 	"github.com/giantswarm/oka/pkg/kubernetes"
 )
 
+// ToolInfo contains metadata about an MCP tool.
+type ToolInfo struct {
+	Client           *client.Client
+	ClientName       string
+	OriginalToolName string
+}
+
 var (
 	// defaultInitTimeout is the default timeout for initializing an MCP client.
 	defaultInitTimeout = 15 * time.Second
@@ -31,7 +38,7 @@ var (
 // Clients manages a collection of MCP clients and their associated tools.
 type Clients struct {
 	tools         []llms.Tool
-	toolsClients  map[string]*client.Client
+	toolsClients  map[string]*ToolInfo
 	uniqueClients []*client.Client
 }
 
@@ -39,7 +46,7 @@ type Clients struct {
 func New() *Clients {
 	c := &Clients{
 		tools:         make([]llms.Tool, 0),
-		toolsClients:  make(map[string]*client.Client),
+		toolsClients:  make(map[string]*ToolInfo),
 		uniqueClients: make([]*client.Client, 0),
 	}
 
@@ -50,7 +57,7 @@ func New() *Clients {
 func (c Clients) Clone() *Clients {
 	newClients := &Clients{
 		tools:        make([]llms.Tool, len(c.tools)),
-		toolsClients: make(map[string]*client.Client, len(c.toolsClients)),
+		toolsClients: make(map[string]*ToolInfo, len(c.toolsClients)),
 	}
 
 	newClients.toolsClients = maps.Clone(c.toolsClients)
@@ -167,17 +174,22 @@ func (c *Clients) RegisterClient(ctx context.Context, sc *client.Client, name st
 
 	c.uniqueClients = append(c.uniqueClients, sc)
 
-	// Register tools' client.
-	llmTools := convertToolsResultToLLMtools(toolsResult.Tools)
+	// Register tools' client with prefixed names.
+	llmTools := convertToolsResultToLLMtools(toolsResult.Tools, name)
 	toolsCount := 0
-	for _, tool := range llmTools {
+	for i, tool := range llmTools {
 		_, exists := c.toolsClients[tool.Function.Name]
 		if exists {
 			slog.Warn("Tool already exists, skipping", "server", name, "tool", tool.Function.Name)
 			continue
 		}
 
-		c.toolsClients[tool.Function.Name] = sc
+		// Store with the prefixed name (mcp_clientname_toolname)
+		c.toolsClients[tool.Function.Name] = &ToolInfo{
+			Client:           sc,
+			ClientName:       name,
+			OriginalToolName: toolsResult.Tools[i].Name, // Store the original MCP tool name
+		}
 		c.tools = append(c.tools, tool)
 		toolsCount++
 	}

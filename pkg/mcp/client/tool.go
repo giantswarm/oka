@@ -16,24 +16,33 @@ func (c *Clients) GetTools() []llms.Tool {
 
 // GetToolClient returns the MCP client for a given tool.
 func (c *Clients) GetToolClient(toolName string) *client.Client {
+	toolInfo := c.toolsClients[toolName]
+	if toolInfo == nil {
+		return nil
+	}
+	return toolInfo.Client
+}
+
+// GetToolInfo returns the full ToolInfo for a given tool.
+func (c *Clients) GetToolInfo(toolName string) *ToolInfo {
 	return c.toolsClients[toolName]
 }
 
 // CallTool calls a tool with the given name and arguments.
 func (c *Clients) CallTool(ctx context.Context, name string, args map[string]any) (string, error) {
-	client := c.GetToolClient(name)
-	if client == nil {
+	toolInfo := c.toolsClients[name]
+	if toolInfo == nil {
 		return "", fmt.Errorf("no client found for tool %s", name)
 	}
 
 	// Create a proper CallToolRequest.
 	req := mcp.CallToolRequest{}
-	// Set the tool name and arguments in the params field.
-	req.Params.Name = name
+	// Set the original tool name (stored in ToolInfo) and arguments in the params field.
+	req.Params.Name = toolInfo.OriginalToolName
 	req.Params.Arguments = args
 
 	// Call the tool using the official client.
-	result, err := client.CallTool(ctx, req)
+	result, err := toolInfo.Client.CallTool(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("failed to call tool %s: %w", name, err)
 	}
@@ -68,14 +77,14 @@ func (c *Clients) CallTool(ctx context.Context, name string, args map[string]any
 
 // convertToolsResultToLLMtools converts a slice of MCP tools to a slice of
 // LangChainGo tools.
-func convertToolsResultToLLMtools(mcpTools []mcp.Tool) []llms.Tool {
+func convertToolsResultToLLMtools(mcpTools []mcp.Tool, clientName string) []llms.Tool {
 	var llmsTools []llms.Tool
 
 	for _, mcpTool := range mcpTools {
 		llmTool := llms.Tool{
 			Type: "function",
 			Function: &llms.FunctionDefinition{
-				Name:        mcpTool.Name,
+				Name:        fmt.Sprintf("mcp_%s_%s", clientName, mcpTool.Name),
 				Description: mcpTool.Description,
 			},
 		}
