@@ -103,20 +103,16 @@ func (s *Session) Run(ctx context.Context) {
 		}
 
 		slog.Info("Calling LLM", "session.id", s.ID)
-		llmResponse, err := s.callLLM(ctx, lastCall)
+		llmResponse, toolCalls, err := s.callLLM(ctx, lastCall)
 		if err != nil {
 			slog.Error("Failed to call LLM", "error", err, "session.id", s.ID)
 			finalErr = fmt.Errorf("failed to call LLM: %w", err)
 			return
 		}
 
-		s.log("\n## LLM reasoning\n%s\n", llmResponse.ReasoningContent)
-		if len(llmResponse.ToolCalls) > 0 {
-			s.log("\n## LLM function call\n%s\n", llmResponse.ToolCalls[0].FunctionCall.Name)
-		} else {
-			s.log("\n## LLM function call\nNone\n")
+		if llmResponse.ReasoningContent != "" {
+			s.log("\n## LLM reasoning\n%s\n", llmResponse.ReasoningContent)
 		}
-		s.log("\n## LLM stop reason\n%s\n", llmResponse.StopReason)
 
 		// Check if the investigation is complete (considers both content and tool calls)
 		if s.isInvestigationComplete(llmResponse, lastCall) {
@@ -131,7 +127,7 @@ func (s *Session) Run(ctx context.Context) {
 		s.log("\n## LLM response\n%s\n", trimmedContent)
 
 		// Insist in providing next steps if no tool calls are suggested.
-		if len(llmResponse.ToolCalls) == 0 {
+		if len(toolCalls) == 0 {
 			s.addToContext(llms.ChatMessageTypeHuman, llms.TextPart(motivationText))
 			s.log("\n## Insist LLM to provide next steps\n%s\n", motivationText)
 		}
@@ -140,7 +136,7 @@ func (s *Session) Run(ctx context.Context) {
 		toolCtx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 		defer cancel()
 
-		for _, toolCall := range llmResponse.ToolCalls {
+		for _, toolCall := range toolCalls {
 			s.addToContext(llms.ChatMessageTypeAI, toolCall)
 
 			slog.Info("Tool call", "session.id", s.ID, "tool", toolCall.FunctionCall.Name)
@@ -184,7 +180,7 @@ func (s *Session) addToContext(role llms.ChatMessageType, parts ...llms.ContentP
 }
 
 // callLLM generates a text completion using the specified provider from the registry.
-func (s Session) callLLM(ctx context.Context, lastCall bool) (*llms.ContentChoice, error) {
+func (s Session) callLLM(ctx context.Context, lastCall bool) (*llms.ContentChoice, []llms.ToolCall, error) {
 	// Create a context with appropriate timeout.
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
@@ -195,10 +191,15 @@ func (s Session) callLLM(ctx context.Context, lastCall bool) (*llms.ContentChoic
 
 	resp, err := s.llm.GenerateContent(ctx, s.messages, options...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return resp.Choices[0], nil
+	// Merge ToolCalls from all choices and return them
+	var allToolCalls []llms.ToolCall
+	for _, choice := range resp.Choices {
+		allToolCalls = append(allToolCalls, choice.ToolCalls...)
+	}
+	return resp.Choices[0], allToolCalls, nil
 }
 
 // log writes a message to the session's log file.
