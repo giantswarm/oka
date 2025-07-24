@@ -8,6 +8,7 @@ OKA (Oncall Kubernetes Assistant) is a powerful tool designed to assist on-call 
 - **LLM-Powered Assistance**: By using LLMs, OKA can understand the context of an alert and provide intelligent suggestions and insights.
 - **Runbook Retrieval**: OKA can automatically retrieve and display relevant runbooks for a given alert, ensuring that you have the necessary information at your fingertips.
 - **MCP Tooling**: OKA's functionality can be extended through the use of MCP (Model-Context Protocol) servers, allowing you to integrate with other tools and services (e.g. Kubernetes, Slack, etc.).
+- **Intelligent Tool Discovery**: Uses [Muster MCP aggregator](https://github.com/giantswarm/muster) for smart tool discovery and dynamic tool loading, reducing AI token costs and improving context efficiency.
 
 ## Getting Started
 
@@ -30,11 +31,34 @@ llm:
   token: your-openai-api-key
   model: gpt-4
 mcp_servers:
-  opsgenie:
-    command: mcp-server-kubernetes
+  muster:
+    url: http://localhost:8099
 ```
 
 See the [reference configuration file](./pkg/config) for more details on available options.
+
+### Prerequisites
+
+OKA uses [Muster](https://github.com/giantswarm/muster) as an MCP aggregator for intelligent tool discovery. You'll need to set it up first:
+
+1. **Install and start Muster**:
+```bash
+# Install Muster
+go install github.com/giantswarm/muster@latest
+
+# Start Muster aggregator on port 8099
+muster serve --port 8099
+```
+
+2. **Configure Muster with your tools** (create `.muster/config.yaml`):
+```yaml
+servers:
+  kubernetes:
+    command: mcp-server-kubernetes
+  prometheus:
+    command: mcp-server-prometheus
+  # Add other MCP servers as needed
+```
 
 ### Running OKA
 
@@ -49,6 +73,19 @@ oka
 
 ## How It Works
 
-OKA operates by periodically fetching alerts from OpsGenie. When a new, unacknowledged alert is found, OKA initiates a new session to process it. During the session, OKA uses an LLM to analyze the alert and determine the best course of action. This may involve retrieving a runbook, executing a command, or interacting with other tools via MCP servers.
+OKA operates by periodically fetching alerts from OpsGenie. When a new, unacknowledged alert is found, OKA initiates a new session to process it. During the session, OKA uses an LLM to analyze the alert and determine the best course of action.
+
+**Intelligent Tool Discovery with Muster:**
+1. **Dynamic Tool Loading**: Instead of loading all tools upfront, OKA uses Muster's meta-tools (`list_tools`, `filter_tools`, `call_tool`) for intelligent discovery
+2. **Context Optimization**: Tools are discovered and loaded only when needed, reducing AI token costs
+3. **Flexible Workflows**: The AI can discover Kubernetes, monitoring, and other tools dynamically based on the alert context
+4. **Efficient Investigation**: Use `filter_tools(pattern="kubernetes")` to find relevant tools, then `call_tool` to execute them
+
+**Session Flow:**
+- **Alert Analysis**: LLM examines the alert data
+- **Tool Discovery**: Uses `filter_tools` to find relevant investigation tools
+- **Investigation**: Executes tools via `call_tool` to gather information
+- **Resolution**: Takes action if confident, or escalates with detailed findings
+- **Reporting**: Provides structured summary via Slack
 
 Each session is logged to a file in the `sessions` directory, allowing you to review the entire interaction between OKA and the LLM.

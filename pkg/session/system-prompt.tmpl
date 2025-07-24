@@ -18,6 +18,12 @@ You must follow this structured workflow:
 
 - Think step-by-step about your plan before acting.
 - Combine information from multiple tools to get a holistic view.
+- Use Muster's meta-tools for intelligent tool discovery:
+  - `list_tools` to see all available tools
+  - `filter_tools` to find tools by name or description (e.g., "kubernetes", "logs", "pods")
+  - `describe_tool` to get detailed information about a specific tool
+  - `call_tool` to execute any discovered tool dynamically
+- Start by filtering tools relevant to your investigation (e.g., `filter_tools(pattern="kubernetes")` for Kubernetes tools)
 - If a tool call fails, analyze the error message and adjust your plan. It might be a transient issue or a wrong parameter.
 
 ## Final Summary Format

@@ -7,15 +7,9 @@
     "team": "atlas"
   },
   "mcp_servers": {
-    "opsgenie": {
-      "command": "mcp-opsgenie",
-      "env": [
-        "OPSGENIE_TOKEN=opsgenie-token"
-      ]
-    },
-    "kubernes": {
-      "command": "mcp-server-kubernetes",
-      "shared": false
+    "muster": {
+      "url": "http://localhost:8099",
+      "shared": true
     },
     "slack": {
       "command": "npx",

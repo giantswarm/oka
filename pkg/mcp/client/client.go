@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/client"
@@ -20,7 +19,6 @@ import (
 	"github.com/tmc/langchaingo/llms"
 
 	"github.com/giantswarm/oka/pkg/config"
-	"github.com/giantswarm/oka/pkg/kubernetes"
 )
 
 var (
@@ -200,28 +198,7 @@ func newClient(mcpServer config.MCPServer) (c *client.Client, err error) {
 	case mcpServer.Command != "":
 		fallthrough
 	default:
-		mcpEnv := mcpServer.Env
-		// Create temporary kubeconfig file if the command is for Kubernetes.
-		// This is a hack to isolate the kubeconfig file and avoid changing the
-		// current user's context.
-		if strings.Contains(mcpServer.Command, "kubernetes") {
-			// Create a temporary kubeconfig file.
-			kubeConfigFile, err := kubernetes.CreateTmpKubeConfigFile()
-			if err != nil {
-				return nil, err
-			}
-			// Add the kubeconfig file to the environment variables.
-			if mcpEnv == nil {
-				mcpEnv = make([]string, 0)
-			}
-
-			mcpEnv = append(mcpEnv, fmt.Sprintf("KUBECONFIG=%s", kubeConfigFile))
-
-			slog.Info("Using temporary kubeconfig file", "file", kubeConfigFile)
-			// TODO: handle cleanup of the temporary file properly
-			//defer os.Remove(kubeConfigFile) // Clean up the temporary file after use
-		}
-		t = transport.NewStdio(mcpServer.Command, mcpEnv, mcpServer.Args...)
+		t = transport.NewStdio(mcpServer.Command, mcpServer.Env, mcpServer.Args...)
 	}
 
 	c = client.NewClient(t)

@@ -32,22 +32,31 @@ llm:
   # LLM token for authentication
   token: ""
 # List of MCP servers providing additional functionality to the LLM
+# Recommended: Use Muster as an MCP aggregator for intelligent tool discovery
 mcp_servers:
-  # Command to run the MCP server, e.g., "mcp-server-kubernetes"
-  - command: ""
+  # Muster MCP aggregator - provides meta-tools for intelligent tool discovery
+  muster:
+    # URL for the Muster MCP aggregator running locally
+    url: "http://localhost:8099"
+    # Muster should be shared across sessions for efficiency
+    shared: true
+  # Alternative: Direct MCP server configuration (legacy)
+  # example_server:
+    # Command to run the MCP server
+    # command: ""
     # Arguments for the MCP server command
-    args: []
+    # args: []
     # URL for the MCP server, mutually exclusive with command, takes precedence if both are provided
-    url: ""
+    # url: ""
     # Is the MCP server enabled?
-    disabled: false
+    # disabled: false
     # Environment variables provided to the MCP server
-    env:
-      KEY: value
+    # env:
+    #   KEY: value
     # Timeout for the MCP server to initialize
-    initialize_timeout_seconds: 15s
+    # initialize_timeout_seconds: 15s
     # Optional: If true, a new MCP server will be started for each session
-    shared: false
+    # shared: false
 # OpsGenie configuration
 opsgenie:
   # API URL for OpsGenie, default is the v2 API
