@@ -28,12 +28,11 @@ var (
 			MCPServers: make(map[string]MCPServer),
 			MCPKubernetes: MCPKubernetes{
 				MCPServer: MCPServer{
-					Command: "npx",
-					Args:    []string{"-y", "mcp-server-kubernetes@latest"},
-					Env:     []string{"ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS=true"},
+					Command: "mcp-kubernetes",
+					Args:    []string{"--non-destructive", "--transport", "stdio"},
 				},
 				KubeConfig: MCPKubernetesKubeConfig{
-					FromEnv: "KUBECONFIG_PATH",
+					FromEnv: "KUBECONFIG",
 				},
 			},
 			OpsGenie: OpsGenie{
