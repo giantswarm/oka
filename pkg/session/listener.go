@@ -16,6 +16,8 @@ import (
 	"github.com/giantswarm/oka/pkg/mcp/client"
 )
 
+const endSessionPhrase = "investigation complete"
+
 //go:embed system-prompt.tmpl
 var systemPromptTmpl string
 var systemPromptTemplate *template.Template
@@ -29,9 +31,11 @@ func init() {
 func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *client.Clients, conf *config.Config) error {
 	// Add system prompt instructions
 	systemPromptData := struct {
-		SlackHandle string
+		SlackHandle      string
+		EndSessionPhrase string
 	}{
-		SlackHandle: conf.SlackHandle,
+		SlackHandle:      conf.SlackHandle,
+		EndSessionPhrase: endSessionPhrase,
 	}
 
 	var systemPromptBuilder strings.Builder
@@ -84,4 +88,40 @@ func run(ctx context.Context, alert any, llmModel llms.Model, mcpClients *client
 	}
 
 	s.Run(ctx)
+}
+
+// ProcessSingleAlert processes a single alert directly without continuous listening.
+// This is used for the single alert processing mode.
+func ProcessSingleAlert(ctx context.Context, alert any, llmModel llms.Model, mcpClients *client.Clients, conf *config.Config) error {
+	// Initialize system prompt with configuration data
+	systemPromptData := struct {
+		SlackHandle      string
+		EndSessionPhrase string
+	}{
+		SlackHandle:      conf.SlackHandle,
+		EndSessionPhrase: endSessionPhrase,
+	}
+
+	var systemPromptBuilder strings.Builder
+	err := systemPromptTemplate.Execute(&systemPromptBuilder, systemPromptData)
+	if err != nil {
+		return fmt.Errorf("failed to execute system prompt template: %w", err)
+	}
+	systemPrompt = systemPromptBuilder.String()
+
+	// Clone and configure MCP clients for this session
+	sessionClients := mcpClients.Clone()
+	err = sessionClients.RegisterServersConfig(ctx, conf.GetMCPServers(false))
+	if err != nil {
+		return fmt.Errorf("failed to register MCP servers: %w", err)
+	}
+
+	// Create and run the session
+	s, err := New(alert, llmModel, sessionClients, conf.MaxCalls, conf.SessionsLogDir)
+	if err != nil {
+		return fmt.Errorf("failed to create new session: %w", err)
+	}
+
+	s.Run(ctx)
+	return nil
 }
