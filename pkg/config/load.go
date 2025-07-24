@@ -26,7 +26,17 @@ var (
 				},
 			},
 			MCPServers: make(map[string]MCPServer),
-			OpsGenie: &OpsGenie{
+			MCPKubernetes: MCPKubernetes{
+				MCPServer: MCPServer{
+					Command: "npx",
+					Args:    []string{"-y", "mcp-server-kubernetes@latest"},
+					Env:     []string{"ALLOW_ONLY_NON_DESTRUCTIVE_TOOLS=true"},
+				},
+				KubeConfig: MCPKubernetesKubeConfig{
+					FromEnv: "KUBECONFIG_PATH",
+				},
+			},
+			OpsGenie: OpsGenie{
 				APIUrl:      string(client.API_URL),
 				EnvVar:      "OPSGENIE_TOKEN",
 				Interval:    30 * time.Second,
@@ -86,6 +96,7 @@ func (conf *Config) Print() {
 			fmt.Fprintf(w, "\t- %s: %s\n", name, server.URL)
 		}
 	}
+	fmt.Fprintf(w, "mcp_kubernetes: %s %s\n", conf.MCPKubernetes.Command, strings.Join(append(conf.MCPKubernetes.Args, conf.MCPKubernetes.AdditionalArgs...), " "))
 
 	w.Flush()
 }

@@ -17,8 +17,8 @@ type LLMFactory interface {
 
 // NewFactory returns a new LLMFactory based on the provider specified in the
 // configuration. It supports "anthropic", "google", and "openai" providers.
-func NewFactory(conf *config.Config) (LLMFactory, error) {
-	switch conf.LLM.Provider {
+func NewFactory(conf config.LLM) (LLMFactory, error) {
+	switch conf.Provider {
 	case "anthropic":
 		return newAnthropicFactory(), nil
 	case "google":
@@ -27,7 +27,7 @@ func NewFactory(conf *config.Config) (LLMFactory, error) {
 		return newOpenAIFactory(), nil
 	}
 
-	return nil, fmt.Errorf("unknown LLM provider: %s", conf.LLM.Provider)
+	return nil, fmt.Errorf("unknown LLM provider: %s", conf.Provider)
 }
 
 // genericFactory is a generic implementation of the LLMFactory interface.
