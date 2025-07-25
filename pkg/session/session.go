@@ -15,10 +15,6 @@ import (
 	"github.com/giantswarm/oka/pkg/mcp/client"
 )
 
-const (
-	motivationText = "Provide next steps to continue the investigation."
-)
-
 // Session represents an AI assistant session for processing a single alert.
 type Session struct {
 	ID string
@@ -124,12 +120,6 @@ func (s *Session) Run(ctx context.Context) {
 		// Check if the investigation is complete (considers both content and tool calls)
 		if s.isInvestigationComplete(llmResponse, lastCall) {
 			return
-		}
-
-		// Insist in providing next steps if no tool calls are suggested.
-		if len(toolCalls) == 0 {
-			s.addToContext(llms.ChatMessageTypeHuman, llms.TextPart(motivationText))
-			s.log("\n## Insist LLM to provide next steps\n%s\n", motivationText)
 		}
 
 		// Create a context with timeout for tool processing.
