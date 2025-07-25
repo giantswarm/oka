@@ -29,7 +29,7 @@ var (
 			MCPKubernetes: MCPKubernetes{
 				MCPServer: MCPServer{
 					Command: "mcp-kubernetes",
-					Args:    []string{"--non-destructive", "--transport", "stdio"},
+					Args:    []string{"serve", "--non-destructive", "--transport", "stdio"},
 				},
 				KubeConfig: MCPKubernetesKubeConfig{
 					FromEnv: "KUBECONFIG",
