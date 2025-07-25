@@ -76,11 +76,6 @@ func runner(c *cobra.Command, args []string) (err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// If alert ID is provided, process single alert and exit
-	if alertID != "" {
-		return processSingleAlert(ctx, alertID, conf)
-	}
-
 	// Set up signal handling for graceful shutdown in continuous mode
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
@@ -91,68 +86,9 @@ func runner(c *cobra.Command, args []string) (err error) {
 		cancel()
 	}()
 
-	// Otherwise, run the continuous polling mode
-	return runContinuousMode(ctx, conf)
-}
-
-// processSingleAlert fetches and processes a single alert by ID, then exits.
-func processSingleAlert(ctx context.Context, alertID string, conf *config.Config) error {
-	slog.Info("Processing single alert", "alert_id", alertID)
-
 	// Initialize MCP servers.
 	mcpClients := client.New()
-	err := mcpClients.RegisterServersConfig(ctx, conf.GetMCPServers(true))
-	if err != nil {
-		return err
-	}
-	defer mcpClients.Close()
-
-	// Initialize the LLM model.
-	llmModel, err := llm.New(conf)
-	if err != nil {
-		return err
-	}
-	slog.Info("LLM model initialized", "provider", conf.LLM.Provider)
-
-	// Run initialization commands.
-	for _, initCommand := range conf.InitCommands {
-		c := exec.Command(initCommand.Command, initCommand.Args...)
-		slog.Info("Running init command", "command", c.String())
-		_, err = c.Output()
-		if err != nil {
-			return fmt.Errorf("failed to run init command %s: %w", c.String(), err)
-		}
-	}
-
-	// Initialize the OpsGenie service.
-	opsgenieService, err := opsgenie.NewService(conf)
-	if err != nil {
-		return fmt.Errorf("failed to create OpsGenie service: %w", err)
-	}
-
-	// Fetch the specific alert.
-	alert, err := opsgenieService.GetAlert(ctx, alertID)
-	if err != nil {
-		return fmt.Errorf("failed to fetch alert with ID %s: %w", alertID, err)
-	}
-
-	slog.Info("Fetched alert", "alert_id", alertID, "title", alert.Message)
-
-	// Process the alert directly using the session system.
-	err = session.ProcessSingleAlert(ctx, alert, llmModel, mcpClients, conf)
-	if err != nil {
-		return fmt.Errorf("failed to process alert: %w", err)
-	}
-
-	slog.Info("Single alert processing completed", "alert_id", alertID)
-	return nil
-}
-
-// runContinuousMode runs the original continuous polling mode.
-func runContinuousMode(ctx context.Context, conf *config.Config) error {
-	// Initialize MCP servers.
-	mcpClients := client.New()
-	err := mcpClients.RegisterServersConfig(ctx, conf.GetMCPServers(true))
+	err = mcpClients.RegisterServersConfig(ctx, conf.GetMCPServers(true))
 	if err != nil {
 		return err
 	}
@@ -190,8 +126,18 @@ func runContinuousMode(ctx context.Context, conf *config.Config) error {
 
 	// Start the OpsGenie service and session services.
 	alertsChan := make(chan any, 1)
-	service.Run(func() { opsgenieService.Start(ctx, alertsChan) })
+
 	service.Run(func() { session.Listen(ctx, alertsChan, llmModel, mcpClients, conf) })
+
+	if alertID != "" {
+		slog.Info("Single alert mode enabled", "alert_id", alertID)
+		err = opsgenieService.SingleAlert(ctx, alertID, alertsChan)
+		if err != nil {
+			return fmt.Errorf("failed to fetch alert with ID %s: %w", alertID, err)
+		}
+	} else {
+		service.Run(func() { opsgenieService.Start(ctx, alertsChan) })
+	}
 
 	service.Wait()
 

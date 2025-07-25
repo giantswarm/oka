@@ -53,7 +53,12 @@ func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *
 			select {
 			case <-ctx.Done():
 				return
-			case alert := <-c:
+			case alert, more := <-c:
+				if !more {
+					slog.Info("Alert channel closed, stopping session service")
+					return
+				}
+
 				wg.Add(1)
 				go func(alert any, llmModel llms.Model, mcpClients *client.Clients, conf *config.Config) {
 					defer wg.Done()
@@ -88,40 +93,4 @@ func run(ctx context.Context, alert any, llmModel llms.Model, mcpClients *client
 	}
 
 	s.Run(ctx)
-}
-
-// ProcessSingleAlert processes a single alert directly without continuous listening.
-// This is used for the single alert processing mode.
-func ProcessSingleAlert(ctx context.Context, alert any, llmModel llms.Model, mcpClients *client.Clients, conf *config.Config) error {
-	// Initialize system prompt with configuration data
-	systemPromptData := struct {
-		SlackHandle      string
-		EndSessionPhrase string
-	}{
-		SlackHandle:      conf.SlackHandle,
-		EndSessionPhrase: endSessionPhrase,
-	}
-
-	var systemPromptBuilder strings.Builder
-	err := systemPromptTemplate.Execute(&systemPromptBuilder, systemPromptData)
-	if err != nil {
-		return fmt.Errorf("failed to execute system prompt template: %w", err)
-	}
-	systemPrompt = systemPromptBuilder.String()
-
-	// Clone and configure MCP clients for this session
-	sessionClients := mcpClients.Clone()
-	err = sessionClients.RegisterServersConfig(ctx, conf.GetMCPServers(false))
-	if err != nil {
-		return fmt.Errorf("failed to register MCP servers: %w", err)
-	}
-
-	// Create and run the session
-	s, err := New(alert, llmModel, sessionClients, conf.MaxCalls, conf.SessionsLogDir)
-	if err != nil {
-		return fmt.Errorf("failed to create new session: %w", err)
-	}
-
-	s.Run(ctx)
-	return nil
 }
