@@ -187,6 +187,9 @@ func (s Session) callLLM(ctx context.Context, lastCall bool) (*llms.ContentChoic
 
 	options := []llms.CallOption{
 		llms.WithTools(s.mcpClients.GetTools()),
+		// Limit generated responses to 1 to save tokens.
+		llms.WithN(1),
+		llms.WithCandidateCount(1),
 	}
 
 	resp, err := s.llm.GenerateContent(ctx, s.messages, options...)
