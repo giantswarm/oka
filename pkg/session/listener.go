@@ -48,7 +48,10 @@ func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *
 	slog.Info("Session service started")
 
 	var wg sync.WaitGroup
+	done := make(chan struct{})
+
 	go func() {
+		defer close(done)
 		for {
 			select {
 			case <-ctx.Done():
@@ -68,8 +71,14 @@ func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *
 		}
 	}()
 
-	<-ctx.Done()
-	slog.Info("Waiting for sessions to complete")
+	// Wait for either context cancellation or channel closure
+	select {
+	case <-ctx.Done():
+		slog.Info("Context cancelled, waiting for sessions to complete")
+	case <-done:
+		slog.Info("Alert channel closed, waiting for sessions to complete")
+	}
+
 	wg.Wait()
 	slog.Info("Session service stopped")
 
