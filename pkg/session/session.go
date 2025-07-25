@@ -114,17 +114,17 @@ func (s *Session) Run(ctx context.Context) {
 			s.log("\n## LLM reasoning\n%s\n", llmResponse.ReasoningContent)
 		}
 
-		// Check if the investigation is complete (considers both content and tool calls)
-		if s.isInvestigationComplete(llmResponse, lastCall) {
-			return
-		}
-
 		// Trim whitespace from response content to avoid API rejection
 		trimmedContent := strings.TrimSpace(llmResponse.Content)
 		if trimmedContent != "" {
 			s.addToContext(llms.ChatMessageTypeAI, llms.TextPart(trimmedContent))
 		}
 		s.log("\n## LLM response\n%s\n", trimmedContent)
+
+		// Check if the investigation is complete (considers both content and tool calls)
+		if s.isInvestigationComplete(llmResponse, lastCall) {
+			return
+		}
 
 		// Insist in providing next steps if no tool calls are suggested.
 		if len(toolCalls) == 0 {
