@@ -84,7 +84,7 @@ func convertToolsResultToLLMtools(mcpTools []mcp.Tool, clientName string) []llms
 		llmTool := llms.Tool{
 			Type: "function",
 			Function: &llms.FunctionDefinition{
-				Name:        fmt.Sprintf("mcp_%s_%s", clientName, mcpTool.Name),
+				Name:        fmt.Sprintf("%s_%s", clientName, mcpTool.Name),
 				Description: mcpTool.Description,
 			},
 		}

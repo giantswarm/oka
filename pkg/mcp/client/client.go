@@ -184,7 +184,7 @@ func (c *Clients) RegisterClient(ctx context.Context, sc *client.Client, name st
 			continue
 		}
 
-		// Store with the prefixed name (mcp_clientname_toolname)
+		// Store with the prefixed name (clientname_toolname)
 		c.toolsClients[tool.Function.Name] = &ToolInfo{
 			Client:           sc,
 			ClientName:       name,
