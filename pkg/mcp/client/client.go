@@ -26,7 +26,6 @@ import (
 // ToolInfo contains metadata about an MCP tool.
 type ToolInfo struct {
 	Client           *client.Client
-	ClientName       string
 	OriginalToolName string
 }
 
@@ -187,7 +186,6 @@ func (c *Clients) RegisterClient(ctx context.Context, sc *client.Client, name st
 		// Store with the prefixed name (clientname_toolname)
 		c.toolsClients[tool.Function.Name] = &ToolInfo{
 			Client:           sc,
-			ClientName:       name,
 			OriginalToolName: toolsResult.Tools[i].Name, // Store the original MCP tool name
 		}
 		c.tools = append(c.tools, tool)
