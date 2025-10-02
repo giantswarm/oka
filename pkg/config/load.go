@@ -26,7 +26,16 @@ var (
 				},
 			},
 			MCPServers: make(map[string]MCPServer),
-			OpsGenie: &OpsGenie{
+			MCPKubernetes: MCPKubernetes{
+				MCPServer: MCPServer{
+					Command: "mcp-kubernetes",
+					Args:    []string{"serve", "--non-destructive", "--transport", "stdio"},
+				},
+				KubeConfig: MCPKubernetesKubeConfig{
+					FromEnv: "KUBECONFIG",
+				},
+			},
+			OpsGenie: OpsGenie{
 				APIUrl:      string(client.API_URL),
 				EnvVar:      "OPSGENIE_TOKEN",
 				Interval:    30 * time.Second,
@@ -86,6 +95,7 @@ func (conf *Config) Print() {
 			fmt.Fprintf(w, "\t- %s: %s\n", name, server.URL)
 		}
 	}
+	fmt.Fprintf(w, "mcp_kubernetes: %s %s\n", conf.MCPKubernetes.Command, strings.Join(append(conf.MCPKubernetes.Args, conf.MCPKubernetes.AdditionalArgs...), " "))
 
 	w.Flush()
 }
