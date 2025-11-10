@@ -102,7 +102,7 @@ func runner(c *cobra.Command, args []string) (err error) {
 	//}
 
 	// Initialize the LLM model.
-	llmModel, err := llm.New(conf)
+	llmModel, err := llm.New(conf.LLM)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func runner(c *cobra.Command, args []string) (err error) {
 	}
 
 	// Initialize the OpsGenie service.
-	opsgenieService, err := opsgenie.NewService(conf)
+	opsgenieService, err := opsgenie.NewService(conf.OpsGenie)
 	if err != nil {
 		return fmt.Errorf("failed to create OpsGenie service: %w", err)
 	}
