@@ -12,13 +12,13 @@ import (
 // New creates a new llms.Model based on the provided configuration. It uses a
 // factory to build the appropriate LLM client (e.g., OpenAI, Anthropic) and
 // returns a generic `llms.Model` interface.
-func New(conf *config.Config) (llms.Model, error) {
+func New(conf config.LLM) (llms.Model, error) {
 	factory, err := NewFactory(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	model, err := factory.Build(conf.LLM)
+	model, err := factory.Build(conf)
 	if err != nil {
 		return nil, err
 	}
