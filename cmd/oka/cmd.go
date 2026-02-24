@@ -76,7 +76,7 @@ func runner(c *cobra.Command, args []string) (err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Set up signal handling for graceful shutdown.
+	// Set up signal handling for graceful shutdown in continuous mode
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
@@ -126,8 +126,18 @@ func runner(c *cobra.Command, args []string) (err error) {
 
 	// Start the OpsGenie service and session services.
 	alertsChan := make(chan any, 1)
-	service.Run(func() { opsgenieService.Start(ctx, alertsChan) })
+
 	service.Run(func() { session.Listen(ctx, alertsChan, llmModel, mcpClients, conf) })
+
+	if alertID != "" {
+		slog.Info("Single alert mode enabled", "alert_id", alertID)
+		err = opsgenieService.SingleAlert(ctx, alertID, alertsChan)
+		if err != nil {
+			return fmt.Errorf("failed to fetch alert with ID %s: %w", alertID, err)
+		}
+	} else {
+		service.Run(func() { opsgenieService.Start(ctx, alertsChan) })
+	}
 
 	service.Wait()
 
