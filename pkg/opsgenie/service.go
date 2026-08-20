@@ -16,20 +16,20 @@ type Service struct {
 }
 
 // NewService creates a new OpsGenie service.
-func NewService(conf *config.Config) (*Service, error) {
-	alertClient, err := NewAlertClient(conf.OpsGenie.APIUrl, conf.OpsGenie.EnvVar)
+func NewService(conf config.OpsGenie) (*Service, error) {
+	alertClient, err := NewAlertClient(conf.APIUrl, conf.EnvVar)
 	if err != nil {
 		return nil, err
 	}
 
-	query, err := TemplateQuery(conf.OpsGenie.QueryString, conf.OpsGenie.Team)
+	query, err := TemplateQuery(conf.QueryString, conf.Team)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &Service{
 		alertClient: alertClient,
-		interval:    conf.OpsGenie.Interval,
+		interval:    conf.Interval,
 		query:       query,
 	}
 
