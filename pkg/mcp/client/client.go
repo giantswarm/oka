@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/client"
@@ -91,6 +90,56 @@ func (c *Clients) RegisterServersConfig(ctx context.Context, mcpServers config.M
 	}
 
 	slog.Info("Finished initializing all MCP clients", "count", serverCount)
+
+	return nil
+}
+
+// RegisterKubernetesServersConfig registers MCP servers from the provided configuration.
+func (c *Clients) RegisterKubernetesConfig(ctx context.Context, mcpKubernetesServer config.MCPKubernetes) error {
+
+	server := mcpKubernetesServer.MCPServer
+	server.Args = append(server.Args, mcpKubernetesServer.AdditionalArgs...)
+
+	// Create a temporary kubeconfig file.
+	// This is to isolate the kubeconfig file and avoid changing the
+	// current user's context.
+	kubeConfigFile, err := kubernetes.CreateTmpKubeConfigFile()
+	if err != nil {
+		return err
+	}
+
+	if mcpKubernetesServer.KubeConfig.FromEnv != "" {
+		// If the kubeconfig is specified from an environment variable, use it.
+		// Add the kubeconfig file to the environment variables.
+		if server.Env == nil {
+			server.Env = make([]string, 0)
+		}
+		server.Env = append(server.Env, fmt.Sprintf("%s=%s", mcpKubernetesServer.KubeConfig.FromEnv, kubeConfigFile))
+	} else if mcpKubernetesServer.KubeConfig.FromFlag != "" {
+		// If the kubeconfig is specified from a command-line flag, use it.
+		// Add the kubeconfig file to the command arguments.
+		server.Args = append(server.Args, []string{mcpKubernetesServer.KubeConfig.FromFlag, kubeConfigFile}...)
+	} else {
+		return fmt.Errorf("kubeconfig must be specified either from an environment variable or a command-line flag")
+	}
+
+	slog.Info("Using temporary kubeconfig file", "file", kubeConfigFile)
+	// TODO: handle cleanup of the temporary file properly
+	//defer os.Remove(kubeConfigFile) // Clean up the temporary file after use
+
+	// Create a new MCP client.
+	sc, err := newClient(server)
+	if err != nil {
+		return err
+	}
+
+	err = c.RegisterClient(ctx, sc, "kubernetes", server.InitializeTimeoutSeconds)
+	if err != nil {
+		// If the client failed to initialize, close it and continue.
+		return err
+	}
+
+	slog.Info("Finished initializing MCP Kubernetes clients")
 
 	return nil
 }
@@ -200,28 +249,7 @@ func newClient(mcpServer config.MCPServer) (c *client.Client, err error) {
 	case mcpServer.Command != "":
 		fallthrough
 	default:
-		mcpEnv := mcpServer.Env
-		// Create temporary kubeconfig file if the command is for Kubernetes.
-		// This is a hack to isolate the kubeconfig file and avoid changing the
-		// current user's context.
-		if strings.Contains(mcpServer.Command, "kubernetes") {
-			// Create a temporary kubeconfig file.
-			kubeConfigFile, err := kubernetes.CreateTmpKubeConfigFile()
-			if err != nil {
-				return nil, err
-			}
-			// Add the kubeconfig file to the environment variables.
-			if mcpEnv == nil {
-				mcpEnv = make([]string, 0)
-			}
-
-			mcpEnv = append(mcpEnv, fmt.Sprintf("KUBECONFIG=%s", kubeConfigFile))
-
-			slog.Info("Using temporary kubeconfig file", "file", kubeConfigFile)
-			// TODO: handle cleanup of the temporary file properly
-			//defer os.Remove(kubeConfigFile) // Clean up the temporary file after use
-		}
-		t = transport.NewStdio(mcpServer.Command, mcpEnv, mcpServer.Args...)
+		t = transport.NewStdio(mcpServer.Command, mcpServer.Env, mcpServer.Args...)
 	}
 
 	c = client.NewClient(t)

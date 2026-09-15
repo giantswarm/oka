@@ -77,6 +77,12 @@ func run(ctx context.Context, alert any, llmModel llms.Model, mcpClients *client
 		return
 	}
 
+	err = sessionClients.RegisterKubernetesConfig(ctx, conf.MCPKubernetes)
+	if err != nil {
+		slog.Error("Failed to register MCP Kubernetes servers", "error", err)
+		return
+	}
+
 	s, err := New(alert, llmModel, sessionClients, conf.MaxCalls, conf.SessionsLogDir)
 	if err != nil {
 		slog.Error("Failed to create new session", "error", err)
