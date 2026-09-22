@@ -15,10 +15,11 @@ type Config struct {
 	SessionsLogDir   string           `mapstructure:"sessions_log_dir"`  // Directory to store session logs
 	SlackHandle      string           `mapstructure:"slack_handle"`      // Slack handle to use for notifications
 
-	InitCommands []Command  `mapstructure:"init_commands"` // Commands to run during initialization
-	LLM          LLM        `mapstructure:"llm"`           // LLM configuration for the application
-	MCPServers   MCPServers `mapstructure:"mcp_servers"`   // MCP servers to configure
-	OpsGenie     *OpsGenie  `mapstructure:"opsgenie"`      // OpsGenie configuration for fetching alerts
+	InitCommands  []Command     `mapstructure:"init_commands"`  // Commands to run during initialization
+	LLM           LLM           `mapstructure:"llm"`            // LLM configuration for the application
+	MCPServers    MCPServers    `mapstructure:"mcp_servers"`    // MCP servers to configure
+	MCPKubernetes MCPKubernetes `mapstructure:"mcp_kubernetes"` // Kubernetes configuration for MCP servers
+	OpsGenie      OpsGenie      `mapstructure:"opsgenie"`       // OpsGenie configuration for fetching alerts
 }
 
 // OpsGenie holds the configuration for the OpsGenie integration, including API
@@ -45,6 +46,17 @@ type MCPServer struct {
 	InitializeTimeoutSeconds *int     `mapstructure:"initialize_timeout_seconds,omitempty"` // Timeout for server initialization in seconds
 	Shared                   *bool    `mapstructure:"shared,omitempty"`                     // Whether this server is shared across sessions
 	URL                      string   `mapstructure:"url"`                                  // URL of the MCP server
+}
+
+type MCPKubernetes struct {
+	MCPServer      `mapstructure:",squash"` // Embed MCPServer to inherit its fields
+	AdditionalArgs []string                 `mapstructure:"additional_args"` // Additional arguments for the Kubernetes MCP server
+	KubeConfig     MCPKubernetesKubeConfig  `mapstructure:"kube_config"`     // KubeConfig settings for the Kubernetes MCP server
+}
+
+type MCPKubernetesKubeConfig struct {
+	FromEnv  string `mapstructure:"from_env"`  // Environment variable to read the kubeconfig from
+	FromFlag string `mapstructure:"from_flag"` // Command-line flag to read the kubeconfig from
 }
 
 // LLM holds the configuration for the Large Language Model, including the
