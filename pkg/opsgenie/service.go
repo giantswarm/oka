@@ -2,6 +2,7 @@ package opsgenie
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -84,4 +85,18 @@ func (s *Service) Start(ctx context.Context, queryChan chan<- any) {
 			slog.Info("Fetched new alerts from OpsGenie", "new", count, "total", len(alerts))
 		}
 	}
+}
+
+// GetAlert fetches a single alert by ID from OpsGenie.
+func (s *Service) SingleAlert(ctx context.Context, alertID string, queryChan chan<- any) error {
+	defer close(queryChan)
+
+	alert, err := s.alertClient.GetAlert(ctx, alertID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch alert with ID %s: %w", alertID, err)
+	}
+
+	queryChan <- alert
+
+	return nil
 }
