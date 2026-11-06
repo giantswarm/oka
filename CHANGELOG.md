@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Update github.com/spf13/pflag to v1.1.0 (giantswarm/oka#177)
+
 
 
 [Unreleased]: https://github.com/giantswarm/oka/tree/main
