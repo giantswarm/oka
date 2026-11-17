@@ -16,3 +16,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [Unreleased]: https://github.com/giantswarm/oka/tree/main
+- Update github.com/prometheus/common to v0.74.0 (giantswarm/oka#185)
