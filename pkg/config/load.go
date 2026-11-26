@@ -19,13 +19,8 @@ var (
 			MaxCalls:       20,
 			SessionsLogDir: "sessions",
 
-			InitCommands: []Command{
-				{
-					Command: "tsh",
-					Args:    []string{"kube", "login", "--all"},
-				},
-			},
-			MCPServers: make(map[string]MCPServer),
+			InitCommands: []Command{},
+			MCPServers:   make(map[string]MCPServer),
 			OpsGenie: &OpsGenie{
 				APIUrl:      string(client.API_URL),
 				EnvVar:      "OPSGENIE_TOKEN",

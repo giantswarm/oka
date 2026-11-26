@@ -16,6 +16,8 @@ import (
 	"github.com/giantswarm/oka/pkg/mcp/client"
 )
 
+const endSessionPhrase = "investigation complete"
+
 //go:embed system-prompt.tmpl
 var systemPromptTmpl string
 var systemPromptTemplate *template.Template
@@ -29,9 +31,11 @@ func init() {
 func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *client.Clients, conf *config.Config) error {
 	// Add system prompt instructions
 	systemPromptData := struct {
-		SlackHandle string
+		SlackHandle      string
+		EndSessionPhrase string
 	}{
-		SlackHandle: conf.SlackHandle,
+		SlackHandle:      conf.SlackHandle,
+		EndSessionPhrase: endSessionPhrase,
 	}
 
 	var systemPromptBuilder strings.Builder
@@ -44,12 +48,20 @@ func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *
 	slog.Info("Session service started")
 
 	var wg sync.WaitGroup
+	done := make(chan struct{})
+
 	go func() {
+		defer close(done)
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case alert := <-c:
+			case alert, more := <-c:
+				if !more {
+					slog.Info("Alert channel closed, stopping session service")
+					return
+				}
+
 				wg.Add(1)
 				go func(alert any, llmModel llms.Model, mcpClients *client.Clients, conf *config.Config) {
 					defer wg.Done()
@@ -59,8 +71,14 @@ func Listen(ctx context.Context, c <-chan any, llmModel llms.Model, mcpClients *
 		}
 	}()
 
-	<-ctx.Done()
-	slog.Info("Waiting for sessions to complete")
+	// Wait for either context cancellation or channel closure
+	select {
+	case <-ctx.Done():
+		slog.Info("Context cancelled, waiting for sessions to complete")
+	case <-done:
+		slog.Info("Alert channel closed, waiting for sessions to complete")
+	}
+
 	wg.Wait()
 	slog.Info("Session service stopped")
 
